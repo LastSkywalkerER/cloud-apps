@@ -1,0 +1,39 @@
+services:
+  wings:
+    image: 'ghcr.io/pelican-dev/wings:latest'
+    container_name: wings
+    restart: always
+    tty: true
+    networks:
+      - wings0
+    ports:
+      - '8090:8090'
+      - '2022:2022'
+    environment:
+      - SERVICE_URL_WINGS_8090
+      - TZ=UTC
+      - WINGS_UID=988
+      - WINGS_GID=988
+      - WINGS_USERNAME=pelican
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+      - '/var/lib/docker/containers/:/var/lib/docker/containers/'
+      - '/etc/pelican/:/etc/pelican/'
+      - '/var/lib/pelican/:/var/lib/pelican/'
+      - '/var/log/pelican/:/var/log/pelican/'
+      - '/tmp/pelican/:/tmp/pelican/'
+      - '/etc/ssl/certs:/etc/ssl/certs:ro'
+      - type: bind
+        source: ./etc/config.yml
+        target: /etc/pelican/config.yml
+        content: "{\n  \"debug\": false,\n  \"uuid\": \"229ed53e-98bc-436c-8615-64418502c10e\",\n  \"token_id\": \"6yELD2A1XAbrbvRT\",\n  \"token\": \"iXn0W2VQihsDWXaXd5jsPCJhyuaCQW04uDWDy4OXylh3acmtlubykUFRVZngNBS4\",\n  \"api\": {\n    \"host\": \"0.0.0.0\",\n    \"port\": 8090,\n    \"ssl\": {\n      \"enabled\": false,\n      \"cert\": \"/etc/letsencrypt/live/pelican-wings.sky-apps.uk/fullchain.pem\",\n      \"key\": \"/etc/letsencrypt/live/pelican-wings.sky-apps.uk/privkey.pem\"\n    },\n    \"upload_limit\": 256\n  },\n  \"system\": {\n    \"data\": \"/var/lib/pelican/volumes\",\n    \"sftp\": {\n      \"bind_port\": 2022\n    }\n  },\n  \"allowed_mounts\": [],\n  \"remote\": \"https://pelican-panel.sky-tehnol.uk\",\n  \"docker\": {\n    \"network\": {\n      \"interface\": \"172.21.0.1\",\n      \"dns\": [\n        \"1.1.1.1\",\n        \"1.0.0.1\"\n      ],\n      \"name\": \"wings0\",\n      \"ispn\": false,\n      \"driver\": \"\",\n      \"network_mode\": \"wings0\",\n      \"is_internal\": false,\n      \"enable_icc\": true,\n      \"network_mtu\": 1500,\n      \"interfaces\": {\n        \"v4\": {\n          \"subnet\": \"172.21.0.0/16\",\n          \"gateway\": \"172.21.0.1\"\n        }\n      }\n    }\n  }\n}"
+networks:
+  wings0:
+    name: wings0
+    driver: bridge
+    ipam:
+      config:
+        -
+          subnet: 172.21.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: wings0

@@ -1,0 +1,125 @@
+name: pelican-panel
+services:
+  postgres:
+    image: 'postgres:15-alpine'
+    container_name: pelican-postgres
+    environment:
+      - 'POSTGRES_DB=${POSTGRES_DB:-panel}'
+      - 'POSTGRES_USER=${POSTGRES_USER:-pelican}'
+      - 'POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-1q2w3e4r}'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U ${POSTGRES_USER:-pelican} -d ${POSTGRES_DB:-panel} -p 5432 || exit 1'
+      start_period: 10s
+      interval: 10s
+      timeout: 2s
+      retries: 5
+    volumes:
+      - 'pelican-postgres:/var/lib/postgresql/data'
+    restart: unless-stopped
+  redis:
+    image: 'redis:alpine'
+    container_name: pelican-redis
+    command:
+      - redis-server
+      - '--appendonly'
+      - 'yes'
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 10s
+      timeout: 2s
+      retries: 5
+    volumes:
+      - 'pelican-redis:/data'
+    restart: unless-stopped
+  panel:
+    image: 'ghcr.io/pelican-dev/panel:main'
+    container_name: pelican-panel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - SERVICE_URL_PELICAN_80
+      - APP_URL=$SERVICE_URL_PELICAN
+      - 'APP_TIMEZONE=${APP_TIMEZONE:-UTC}'
+      - 'APP_BACKUP_DRIVER=${APP_BACKUP_DRIVER:-wings}'
+      - 'LOG_LEVEL=${LOG_LEVEL:-info}'
+      - 'DB_CONNECTION=${DB_CONNECTION:-pgsql}'
+      - 'DB_HOST=${DB_HOST:-postgres}'
+      - 'DB_PORT=${DB_PORT:-5432}'
+      - 'DB_DATABASE=${POSTGRES_DB:-panel}'
+      - 'DB_USERNAME=${POSTGRES_USER:-pelican}'
+      - 'DB_PASSWORD=${POSTGRES_PASSWORD:-1q2w3e4r}'
+      - 'CACHE_STORE=${CACHE_STORE:-redis}'
+      - 'SESSION_DRIVER=${SESSION_DRIVER:-redis}'
+      - 'QUEUE_CONNECTION=${QUEUE_CONNECTION:-redis}'
+      - 'REDIS_HOST=${REDIS_HOST:-redis}'
+      - 'REDIS_PORT=${REDIS_PORT:-6379}'
+      - XDG_DATA_HOME=/pelican-data
+      - 'TRUSTED_PROXIES=${TRUSTED_PROXIES:-}'
+      - 'CAPTCHA_TURNSTILE_ENABLED=${CAPTCHA_TURNSTILE_ENABLED:-}'
+      - 'MAIL_MAILER=${MAIL_MAILER:-smtp}'
+      - 'MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-hello@example.com}'
+      - 'MAIL_FROM_NAME=${MAIL_FROM_NAME:-Example}'
+      - 'MAIL_HOST=${MAIL_HOST:-smtp.example.com}'
+      - 'MAIL_PORT=${MAIL_PORT:-465}'
+      - 'MAIL_USERNAME=${MAIL_USERNAME:-user}'
+      - 'MAIL_PASSWORD=${MAIL_PASSWORD:-pass}'
+      - 'MAIL_SCHEME=${MAIL_SCHEME:-smtp}'
+      - 'OAUTH_FACEBOOK_ENABLED=${OAUTH_FACEBOOK_ENABLED:-}'
+      - 'OAUTH_X_ENABLED=${OAUTH_X_ENABLED:-}'
+      - 'OAUTH_LINKEDIN_ENABLED=${OAUTH_LINKEDIN_ENABLED:-}'
+      - 'OAUTH_GOOGLE_ENABLED=${OAUTH_GOOGLE_ENABLED:-}'
+      - 'OAUTH_GITHUB_ENABLED=${OAUTH_GITHUB_ENABLED:-}'
+      - 'OAUTH_GITLAB_ENABLED=${OAUTH_GITLAB_ENABLED:-}'
+      - 'OAUTH_BITBUCKET_ENABLED=${OAUTH_BITBUCKET_ENABLED:-}'
+      - 'OAUTH_SLACK_ENABLED=${OAUTH_SLACK_ENABLED:-}'
+      - 'OAUTH_AUTHENTIK_ENABLED=${OAUTH_AUTHENTIK_ENABLED:-}'
+      - 'OAUTH_DISCORD_ENABLED=${OAUTH_DISCORD_ENABLED:-}'
+      - 'OAUTH_STEAM_ENABLED=${OAUTH_STEAM_ENABLED:-}'
+    volumes:
+      - 'pelican-data:/pelican-data'
+      -
+        type: bind
+        source: ./Caddyfile
+        target: /etc/caddy/Caddyfile
+        content: |-
+          {
+              admin off
+              servers {
+                  # доверяем всем проксям (IPv4 и IPv6)
+                  trusted_proxies static 0.0.0.0/0 ::/0
+              }
+          }
+
+          :80 {
+              root * /var/www/html/public
+              encode gzip
+
+              php_fastcgi 127.0.0.1:9000
+              file_server
+          }
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-sf'
+        - 'http://127.0.0.1:80/'
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    labels:
+      icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRke_c3xpkfU53W64PJHy2QfXZweO_Fj3YmQ&s'
+volumes:
+  pelican-postgres: {  }
+  pelican-redis: {  }
+  pelican-data: {  }
