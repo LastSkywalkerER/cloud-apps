@@ -1,0 +1,13 @@
+services:
+  excalidraw:
+    build: .
+    container_name: excalidraw-complete
+    ports:
+      - "3012:3002"
+    environment:
+      - STORAGE_TYPE=filesystem
+      - LOCAL_STORAGE_PATH=/app/data
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
