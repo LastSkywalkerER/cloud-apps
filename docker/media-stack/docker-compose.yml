@@ -13,6 +13,7 @@ services:
       - "8686:8686"   # media-lidarr
       - "5055:5055"   # overseerr
       - "9117:9117"   # jackett
+      - "9696:9696"   # prowlarr
     environment:
       - VPN_SERVICE_PROVIDER=custom
       - VPN_TYPE=wireguard
@@ -94,8 +95,8 @@ services:
       - TZ=Europe/Simferopol
     volumes:
       - /volume1/docker/media-stack/overseerr/config:/config
-    restart: unless-stopped
-
+    restart: unless-stopped  
+    
   jackett:
     image: lscr.io/linuxserver/jackett:latest
     container_name: jackett
@@ -112,3 +113,21 @@ services:
       - /volume1/docker/media-stack/jackett/config:/config
       - /volume1/Downloads:/downloads
     restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:1.9.4
+    container_name: prowlarr
+    network_mode: "container:media-gluetun"
+    depends_on:
+      media-gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=1026
+      - PGID=101
+      - TZ=Europe/Simferopol
+    volumes:
+      - /volume1/docker/media-stack/prowlarr/config:/config
+      - /volume1/Downloads:/downloads
+    restart: unless-stopped
+
+  
