@@ -1,0 +1,80 @@
+services:
+  media-gluetun:
+    image: qmcgaw/gluetun
+    container_name: media-gluetun
+    hostname: media-gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "7878:7878"   # media-radarr
+      - "8989:8989"   # media-sonarr
+      - "8686:8686"   # media-lidarr
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - WIREGUARD_ENDPOINT_IP=65.21.152.83
+      - WIREGUARD_ENDPOINT_PORT=51820
+      - WIREGUARD_PUBLIC_KEY=dt1Udtv5KERrlatXtFu71R4mv5XrxPoPC21S2LqmUl4=
+      - WIREGUARD_PRIVATE_KEY=OP4LaG/bSOYPyatREzP+VapP3dCs/j229yNWYMASTWU=
+      - WIREGUARD_PRESHARED_KEY=XGUMqpSu/sf0zF7ss6p8d7irEvJ08ZNhLrPHQzTWcDI=
+      - WIREGUARD_ADDRESSES=10.8.0.7/24
+      - FIREWALL_OUTBOUND_SUBNETS=192.168.0.0/24
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9999/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  media-sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: media-sonarr
+    network_mode: "container:media-gluetun"
+    depends_on:
+      media-gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=1026
+      - PGID=101
+      - TZ=Europe/Simferopol
+    volumes:
+      - /volume1/docker/media-stack/sonarr/config:/config
+      - /volume1/video/tvseries:/tv
+      - /volume1/Downloads/tvseries:/volume1/Downloads/tvseries
+    restart: unless-stopped
+
+  media-radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: media-radarr
+    network_mode: "container:media-gluetun"
+    depends_on:
+      media-gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=1026
+      - PGID=101
+      - TZ=Europe/Simferopol
+    volumes:
+      - /volume1/docker/media-stack/radarr/config:/config
+      - /volume1/video/movies:/movies:z
+      - /volume1/Downloads/movies:/volume1/Downloads/movies:z
+    restart: unless-stopped
+
+  media-lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: media-lidarr
+    network_mode: "container:media-gluetun"
+    depends_on:
+      media-gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=1026
+      - PGID=101
+      - TZ=Europe/Simferopol
+    volumes:
+      - /volume1/docker/media-stack/lidarr/config:/config
+      - /volume1/music:/music
+      - /volume1/Downloads/music:/volume1/Downloads/music
+    restart: unless-stopped
