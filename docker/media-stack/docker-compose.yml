@@ -11,6 +11,8 @@ services:
       - "7878:7878"   # media-radarr
       - "8989:8989"   # media-sonarr
       - "8686:8686"   # media-lidarr
+      - "5055:5055"   # overseerr
+      - "9117:9117"   # jackett
     environment:
       - VPN_SERVICE_PROVIDER=custom
       - VPN_TYPE=wireguard
@@ -77,4 +79,36 @@ services:
       - /volume1/docker/media-stack/lidarr/config:/config
       - /volume1/music:/music
       - /volume1/Downloads/music:/volume1/Downloads/music
+    restart: unless-stopped
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    network_mode: "container:media-gluetun"
+    depends_on:
+      media-gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=1026
+      - PGID=101
+      - TZ=Europe/Simferopol
+    volumes:
+      - /volume1/docker/media-stack/overseerr/config:/config
+    restart: unless-stopped
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    network_mode: "container:media-gluetun"
+    depends_on:
+      media-gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=1026
+      - PGID=101
+      - TZ=Europe/Simferopol
+      - AUTO_UPDATE=true
+    volumes:
+      - /volume1/docker/media-stack/jackett/config:/config
+      - /volume1/Downloads:/downloads
     restart: unless-stopped
